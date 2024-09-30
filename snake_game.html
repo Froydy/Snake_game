@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Game - Pixi.js</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #383838;
+        }
+        #game-container {
+            display: flex;
+            flex-direction: row;
+            background-color: #216873;
+            padding: 20px;
+            border-radius: 10px;
+            
+        }
+        .a {
+            display: flex;
+            flex-direction: column;
+        }
+        #game {
+            width: 400px;
+            height: 400px;
+            background-color: #575757;
+            border: 10px solid #8b591d;
+        }
+        .gui {
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            background-color: #216873;
+            border-left: 2px solid #1b5c66;
+        }
+        .gui label {
+            color: #a6dedb;
+            font-size: 20px;
+            margin: 5px 0;
+        }
+        .gui span {
+            font-weight: bold;
+        }
+        button {
+            margin-top: 10px;
+            background-color: #475151; /* Темный фон */
+            color: #eaeaea; /* Светлый текст */
+            padding: 10px 20px; /* Отступы для размера кнопки */
+            border: 1px solid #333; /* Основная темная граница */
+            border-right: 1px solid #111; /* Светлая правая граница */
+            border-bottom: 1px solid #111; /* Светлая нижняя граница */
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: Arial, sans-serif;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); /* Легкая тень для объема */
+            transition: background-color 0.2s, transform 0.2s; /* Плавный переход */
+        }
+
+        button:hover {
+            background-color: #374444; /* Изменение фона при наведении */
+        }
+
+        button:active {
+            transform: translateY(2px); /* Эффект нажатия */
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); /* Уменьшение тени при нажатии */
+        }
+        #game-modes {
+            display: flex;
+            flex-direction: column;
+            margin-left: 10px;
+            
+        }
+        #game-modes label {
+            color: #a6dedb;
+            font-size: 18px;
+        }
+        #game-modes input[type="radio"] {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background-color: #374444;
+            border: 2px solid #a6dedb;
+            margin-right: 10px;
+            cursor: pointer;
+            position: relative;
+        }
+        /* Add a checkmark (square) when selected */
+        #game-modes input[type="radio"]::after {
+            content: "";
+            width: 10px;
+            height: 10px;
+            background-color: #a6dedb;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none; /* Hidden by default */
+        }
+        /* Show the square check when radio button is checked */
+        #game-modes input[type="radio"]:checked::after {
+            display: block;
+        }
+        #game-modes input[type="radio"]:hover {
+            background-color: #475151;
+        }
+
+        .inp {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start
+        }
+
+        .buttons {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="game"></div>
+    <div class="a">
+    <div class="gui">
+        <h2 style="color: rgb(104, 158, 23);">Snake game</h2>
+        <label>Best Score: <span id="best-score">0</span></label>
+        <label>Current Score: <span id="current-score">0</span></label>
+        <br>
+        <div class="buttons">
+        <button id="play-button">Play</button>
+        <button id="exit-button">Exit</button>
+        <button id="menu-button" style="display:none;">Menu</button>
+        </div>
+    </div>
+    <div id="game-modes">
+
+        <div class="inp">
+        <input type="radio" name="game-mode" value="classic" checked> <p>Classic</p>
+        </div>
+
+        <div class="inp">
+        <input type="radio" name="game-mode" value="god"> <p>God Mode</p>
+        </div>
+        <div class="inp">
+        <input type="radio" name="game-mode" value="walls"> <p>Walls</p>
+        </div>
+        <div class="inp">
+        <input type="radio" name="game-mode" value="portal"> <p>Portal</p>
+        </div>
+        <div class="inp">
+        <input type="radio" name="game-mode" value="speed"> <p>Speed</p>
+        </div>
+        </div>
+        
+    </div>
+    
+</div>
+
+<script>
+window.onload = function() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 400;
+    canvas.height = 400;
+
+    const gameDiv = document.getElementById('game');
+    if (!gameDiv) {
+        console.error("Element with id 'game' not found.");
+        return;
+    }
+
+    gameDiv.appendChild(canvas);
+
+    const app = new PIXI.Application({
+        view: canvas,
+        width: 400,
+        height: 400,
+        backgroundColor: 0x1099bb
+    });
+
+    console.log("PixiJS Application initialized:", app);
+
+    const GRID_SIZE = 20;
+    const CELL_SIZE = 20;
+
+    class Snake {
+        constructor() {
+            this.body = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
+            this.direction = { x: 1, y: 0 };
+            this.isAlive = true;
+        }
+
+        move() {
+            let newHead = {
+                x: this.body[0].x + this.direction.x,
+                y: this.body[0].y + this.direction.y
+            };
+            this.body.unshift(newHead);
+            this.body.pop();
+        }
+
+        setDirection(newDirection) {
+            // Prevent the snake from reversing
+            if (newDirection.x !== -this.direction.x || newDirection.y !== -this.direction.y) {
+                this.direction = newDirection;
+            }
+        }
+
+        checkCollision(gameMode) {
+            const head = this.body[0];
+            if (gameMode !== 'god') {
+                // Classic mode: Check for wall collisions
+                if (head.x < 0 || head.x >= GRID_SIZE || head.y < 0 || head.y >= GRID_SIZE) {
+                    this.isAlive = false; // Game over if it hits a wall
+                }
+                for (let i = 1; i < this.body.length; i++) {
+                    if (head.x === this.body[i].x && head.y === this.body[i].y) {
+                        this.isAlive = false; // Game over if it hits itself
+                    }
+                }
+            } else {
+                // God mode: Wrap around the screen
+                if (head.x < 0) {
+                    head.x = GRID_SIZE - 1; // Wrap to the right side
+                } else if (head.x >= GRID_SIZE) {
+                    head.x = 0; // Wrap to the left side
+                }
+                if (head.y < 0) {
+                    head.y = GRID_SIZE - 1; // Wrap to the bottom
+                } else if (head.y >= GRID_SIZE) {
+                    head.y = 0; // Wrap to the top
+                }
+            }
+        }
+
+        grow() {
+            const tail = this.body[this.body.length - 1];
+            this.body.push({ x: tail.x, y: tail.y });
+        }
+    }
+
+class Game {
+    constructor() {
+        this.snake = new Snake();
+        this.food = this.spawnFood();
+        this.walls = []; // Array to store wall positions
+        this.isPlaying = false;
+        this.score = 0;
+        this.gameMode = 'classic';
+        this.moveInterval = 15; // Default speed of the snake
+        this.lastMoveTime = 0; // Timer to track last move
+    }
+
+    start() {
+        this.snake = new Snake();
+        this.food = this.spawnFood();
+        this.walls = []; // Reset walls when the game starts
+        this.isPlaying = true;
+        this.score = 0;
+        this.updateGUI();
+        this.lastMoveTime = 0; // Reset last move time
+        this.showGameControls();
+    }
+
+    spawnFood() {
+        return {
+            x: Math.floor(Math.random() * GRID_SIZE),
+            y: Math.floor(Math.random() * GRID_SIZE)
+        };
+    }
+
+    spawnWall() {
+        // Spawn a wall in a random position
+        return {
+            x: Math.floor(Math.random() * GRID_SIZE),
+            y: Math.floor(Math.random() * GRID_SIZE)
+        };
+    }
+
+    update(delta) {
+        if (this.isPlaying) {
+            this.lastMoveTime += delta;
+            if (this.lastMoveTime >= this.moveInterval) {
+                this.snake.move();
+                this.checkFoodCollision();
+                this.snake.checkCollision(this.gameMode);
+                this.checkWallCollision(); // Check if the snake hits a wall
+                if (!this.snake.isAlive) {
+                    this.isPlaying = false;
+                    alert('Game Over!');
+                    this.showMainMenu();
+                }
+                this.render();
+                this.lastMoveTime = 0; // Reset last move time
+            }
+        }
+    }
+
+    checkFoodCollision() {
+        const head = this.snake.body[0];
+        if (head.x === this.food.x && head.y === this.food.y) {
+            this.snake.grow();
+            this.food = this.spawnFood();
+            this.score += 10;
+            this.updateGUI();
+            
+            if (this.gameMode === 'walls') {
+                // Spawn a wall when food is eaten
+                this.walls.push(this.spawnWall());
+            }
+        }
+    }
+
+    checkWallCollision() {
+        const head = this.snake.body[0];
+        for (let wall of this.walls) {
+            if (head.x === wall.x && head.y === wall.y) {
+                this.snake.isAlive = false; // Game over if the snake hits a wall
+            }
+        }
+    }
+
+    updateGUI() {
+        document.getElementById('current-score').innerText = this.score;
+    }
+
+    render() {
+        app.stage.removeChildren();
+
+        // Render snake
+        this.snake.body.forEach(segment => {
+            const snakeSegment = new PIXI.Graphics();
+            snakeSegment.beginFill(0x00FF00);
+            snakeSegment.drawRect(segment.x * CELL_SIZE, segment.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+            snakeSegment.endFill();
+            app.stage.addChild(snakeSegment);
+        });
+
+        // Render food
+        const food = new PIXI.Graphics();
+        food.beginFill(0xFF0000);
+        food.drawRect(this.food.x * CELL_SIZE, this.food.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+        food.endFill();
+        app.stage.addChild(food);
+
+        // Render walls
+        this.walls.forEach(wall => {
+            const wallBlock = new PIXI.Graphics();
+            wallBlock.beginFill(0x000000);
+            wallBlock.drawRect(wall.x * CELL_SIZE, wall.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+            wallBlock.endFill();
+            app.stage.addChild(wallBlock);
+        });
+    }
+
+    showGameControls() {
+        document.getElementById('play-button').style.display = 'none';
+        document.getElementById('exit-button').style.display = 'none';
+        document.getElementById('menu-button').style.display = 'inline';
+        document.getElementById('game-modes').style.display = 'none'; // Hide game modes
+    }
+
+    showMainMenu() {
+        document.getElementById('play-button').style.display = 'inline';
+        document.getElementById('exit-button').style.display = 'inline';
+        document.getElementById('menu-button').style.display = 'none';
+        document.getElementById('game-modes').style.display = 'flex'; // Show game modes
+    }
+
+    setGameMode(mode) {
+        this.gameMode = mode;
+    }
+}
+
+    const game = new Game();
+
+    app.ticker.add((delta) => {
+        game.update(delta);
+    });
+
+    // Handle keyboard controls
+    window.addEventListener('keydown', (event) => {
+        if (game.isPlaying) {
+            switch (event.key) {
+                case 'ArrowUp':
+                    game.snake.setDirection({ x: 0, y: -1 });
+                    break;
+                case 'ArrowDown':
+                    game.snake.setDirection({ x: 0, y: 1 });
+                    break;
+                case 'ArrowLeft':
+                    game.snake.setDirection({ x: -1, y: 0 });
+                    break;
+                case 'ArrowRight':
+                    game.snake.setDirection({ x: 1, y: 0 });
+                    break;
+            }
+        }
+    });
+
+    document.getElementById('play-button').addEventListener('click', () => {
+        const selectedMode = document.querySelector('input[name="game-mode"]:checked').value;
+        game.setGameMode(selectedMode);
+        game.start();
+    });
+
+    document.getElementById('menu-button').addEventListener('click', () => {
+        game.isPlaying = false;
+        game.showMainMenu();
+    });
+
+    document.getElementById('exit-button').addEventListener('click', () => {
+        window.close();
+    });
+};
+</script>
+</body>
+</html>
